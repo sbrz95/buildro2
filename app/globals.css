@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 @import "tailwindcss";
-@import "tw-animate-css";
+/* Removed invalid tw-animate-css import that was causing deployment error */
 
 @custom-variant dark (&:is(.dark *));
 
