@@ -12,7 +12,7 @@ import { useAuth } from "@/contexts/auth-context"
 export default function SubscriptionSuccessPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const { updateUser } = useAuth()
+  const { user } = useAuth()
   const sessionId = searchParams.get("session_id")
   const planId = searchParams.get("plan_id")
 
@@ -21,37 +21,31 @@ export default function SubscriptionSuccessPage() {
 
   useEffect(() => {
     const processSubscription = async () => {
-      if (!sessionId || !planId) return
+      if (!sessionId || !planId || !user) return
 
       try {
-        // Mock subscription processing
-        const mockSubscription = {
-          id: sessionId,
-          planId: planId,
-          planName: planId === "starter" ? "Starter Plan" : "Für AI Experten",
-          price: planId === "starter" ? 139 : 69,
-          currency: "EUR",
-          interval: "month",
-          status: "active",
-          currentPeriodStart: new Date().toISOString(),
-          currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-          customer: {
-            email: "user@example.com",
-            name: "Max Mustermann",
+        const response = await fetch("/api/user/subscription", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
           },
+          body: JSON.stringify({
+            sessionId,
+            planId,
+          }),
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          setSubscriptionData(data.subscription)
+
+          toast({
+            title: "Abonnement aktiviert!",
+            description: `Willkommen beim ${data.subscription.planName}. Du kannst jetzt alle Features nutzen.`,
+          })
+        } else {
+          throw new Error("Failed to process subscription")
         }
-
-        setSubscriptionData(mockSubscription)
-
-        // Update user plan in auth context
-        updateUser({
-          plan: planId as "starter" | "pro" | "custom",
-        })
-
-        toast({
-          title: "Abonnement aktiviert!",
-          description: `Willkommen beim ${mockSubscription.planName}. Du kannst jetzt alle Features nutzen.`,
-        })
       } catch (error) {
         console.error("Error processing subscription:", error)
         toast({
@@ -65,7 +59,7 @@ export default function SubscriptionSuccessPage() {
     }
 
     processSubscription()
-  }, [sessionId, planId, updateUser])
+  }, [sessionId, planId, user])
 
   const handleContinue = () => {
     router.push("/")

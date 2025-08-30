@@ -1,16 +1,19 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
-import { AlertTriangle, CreditCard, Shield, Trash2, Moon, Sun, User, Crown } from "lucide-react"
+import { AlertTriangle, CreditCard, Shield, Trash2, Moon, Sun, User, Crown, Download, Edit } from "lucide-react"
 import { useTheme } from "next-themes"
+import { useAuth } from "@/contexts/auth-context"
+import Link from "next/link"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,10 +26,106 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 
+interface UserProfile {
+  id: string
+  email: string
+  full_name: string
+  subscription_plan: string
+  subscription_status: string
+  created_at: string
+}
+
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme()
+  const { user, logout } = useAuth()
+  const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [editing, setEditing] = useState(false)
+  const [fullName, setFullName] = useState("")
   const [dataLogging, setDataLogging] = useState(true)
   const [analyticsConsent, setAnalyticsConsent] = useState(false)
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user) return
+
+      try {
+        const response = await fetch("/api/user/profile")
+        if (response.ok) {
+          const data = await response.json()
+          setProfile(data.profile)
+          setFullName(data.profile.full_name || "")
+        }
+      } catch (error) {
+        console.error("Error fetching profile:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchProfile()
+  }, [user])
+
+  const handleUpdateProfile = async () => {
+    if (!user) return
+
+    try {
+      const response = await fetch("/api/user/profile", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          full_name: fullName,
+        }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setProfile(data.profile)
+        setEditing(false)
+      }
+    } catch (error) {
+      console.error("Error updating profile:", error)
+    }
+  }
+
+  const handleExportData = async () => {
+    try {
+      const response = await fetch("/api/privacy/export", {
+        method: "POST",
+      })
+
+      if (response.ok) {
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement("a")
+        a.href = url
+        a.download = `buildro-data-export-${new Date().toISOString().split("T")[0]}.json`
+        document.body.appendChild(a)
+        a.click()
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+      }
+    } catch (error) {
+      console.error("Error exporting data:", error)
+    }
+  }
+
+  const handleDeleteAccount = async () => {
+    try {
+      const response = await fetch("/api/privacy/delete-account", {
+        method: "DELETE",
+      })
+
+      if (response.ok) {
+        logout()
+        window.location.href = "/"
+      }
+    } catch (error) {
+      console.error("Error deleting account:", error)
+    }
+  }
 
   const userStats = {
     level: 3,
@@ -35,21 +134,26 @@ export default function SettingsPage() {
     rank: "Agent Builder",
   }
 
-  const subscription = {
-    plan: "Pro",
-    status: "Aktiv",
-    nextBilling: "15. Januar 2025",
-    price: "29€/Monat",
+  if (loading) {
+    return (
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold">Einstellungen</h1>
+          <p className="text-muted-foreground">Lade Profil...</p>
+        </div>
+      </div>
+    )
   }
 
-  const handleDeleteData = () => {
-    // Handle data deletion
-    console.log("Initiating data deletion process...")
-  }
-
-  const handleManageSubscription = () => {
-    // Redirect to billing portal
-    window.open("https://billing.buildro.ai", "_blank")
+  if (!profile) {
+    return (
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold">Einstellungen</h1>
+          <p className="text-muted-foreground">Profil konnte nicht geladen werden</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -63,26 +167,54 @@ export default function SettingsPage() {
         {/* User Profile & Rank */}
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <User className="h-5 w-5" />
-              <span>Profil & Rang</span>
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <User className="h-5 w-5" />
+                <span>Profil & Rang</span>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => setEditing(!editing)} className="hover-scale">
+                <Edit className="h-4 w-4" />
+              </Button>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="flex items-center space-x-4">
               <Avatar className="h-16 w-16">
-                <AvatarImage src="/diverse-user-avatars.png" />
-                <AvatarFallback>U</AvatarFallback>
+                <AvatarFallback>
+                  {profile.full_name
+                    ? profile.full_name.charAt(0).toUpperCase()
+                    : profile.email.charAt(0).toUpperCase()}
+                </AvatarFallback>
               </Avatar>
               <div className="flex-1">
-                <h3 className="text-lg font-semibold">Max Mustermann</h3>
-                <p className="text-muted-foreground">max@example.com</p>
-                <div className="flex items-center space-x-2 mt-2">
-                  <Crown className="h-4 w-4 text-yellow-500" />
-                  <Badge variant="secondary" className="bg-gradient-accent text-white">
-                    Level {userStats.level} - {userStats.rank}
-                  </Badge>
-                </div>
+                {editing ? (
+                  <div className="space-y-2">
+                    <Input
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder="Vollständiger Name"
+                    />
+                    <div className="flex space-x-2">
+                      <Button size="sm" onClick={handleUpdateProfile}>
+                        Speichern
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => setEditing(false)}>
+                        Abbrechen
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <h3 className="text-lg font-semibold">{profile.full_name || "Kein Name"}</h3>
+                    <p className="text-muted-foreground">{profile.email}</p>
+                    <div className="flex items-center space-x-2 mt-2">
+                      <Crown className="h-4 w-4 text-yellow-500" />
+                      <Badge variant="secondary" className="bg-gradient-accent text-white">
+                        Level {userStats.level} - {userStats.rank}
+                      </Badge>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
@@ -140,23 +272,40 @@ export default function SettingsPage() {
               <div>
                 <h3 className="font-semibold">Aktueller Plan</h3>
                 <div className="flex items-center space-x-2 mt-1">
-                  <Badge className="bg-gradient-accent text-white">{subscription.plan}</Badge>
-                  <span className="text-sm text-muted-foreground">({subscription.price})</span>
+                  <Badge className="bg-gradient-accent text-white capitalize">{profile.subscription_plan}</Badge>
+                  <span className="text-sm text-muted-foreground">
+                    (
+                    {profile.subscription_plan === "starter"
+                      ? "139€/Monat"
+                      : profile.subscription_plan === "pro"
+                        ? "69€/Monat"
+                        : "Individuell"}
+                    )
+                  </span>
                 </div>
               </div>
               <div>
                 <h4 className="text-sm font-medium">Status</h4>
-                <p className="text-sm text-green-600">{subscription.status}</p>
+                <p
+                  className={`text-sm ${profile.subscription_status === "active" ? "text-green-600" : "text-red-600"}`}
+                >
+                  {profile.subscription_status === "active" ? "Aktiv" : "Inaktiv"}
+                </p>
               </div>
               <div>
-                <h4 className="text-sm font-medium">Nächste Abrechnung</h4>
-                <p className="text-sm text-muted-foreground">{subscription.nextBilling}</p>
+                <h4 className="text-sm font-medium">Mitglied seit</h4>
+                <p className="text-sm text-muted-foreground">{new Date(profile.created_at).toLocaleDateString()}</p>
               </div>
             </div>
-            <div className="flex items-center">
-              <Button onClick={handleManageSubscription} className="w-full">
-                Abo & Abrechnung verwalten
-              </Button>
+            <div className="flex flex-col gap-2">
+              <Link href="/billing" className="flex-1">
+                <Button className="w-full">Abrechnung verwalten</Button>
+              </Link>
+              <Link href="/subscribe" className="flex-1">
+                <Button variant="outline" className="w-full bg-transparent">
+                  Plan ändern
+                </Button>
+              </Link>
             </div>
           </div>
         </CardContent>
@@ -201,34 +350,40 @@ export default function SettingsPage() {
               <h4 className="font-medium">Datenrechte</h4>
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">
-                  Gemäß DSGVO haben Sie das Recht auf Löschung Ihrer personenbezogenen Daten.
+                  Gemäß DSGVO haben Sie das Recht auf Portabilität und Löschung Ihrer personenbezogenen Daten.
                 </p>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="destructive" className="w-full md:w-auto">
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Meine Daten löschen
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle className="flex items-center space-x-2">
-                        <AlertTriangle className="h-5 w-5 text-red-500" />
-                        <span>Daten unwiderruflich löschen?</span>
-                      </AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Diese Aktion kann nicht rückgängig gemacht werden. Alle Ihre Daten, einschließlich Agenten,
-                        Gespräche und Einstellungen, werden permanent gelöscht.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleDeleteData} className="bg-red-600 hover:bg-red-700">
-                        Daten löschen
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Button variant="outline" onClick={handleExportData} className="flex-1 bg-transparent">
+                    <Download className="mr-2 h-4 w-4" />
+                    Daten exportieren
+                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" className="flex-1">
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Account löschen
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center space-x-2">
+                          <AlertTriangle className="h-5 w-5 text-red-500" />
+                          <span>Account unwiderruflich löschen?</span>
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Diese Aktion kann nicht rückgängig gemacht werden. Alle Ihre Daten, einschließlich Agenten,
+                          Demos, Bulk-Tests und Einstellungen, werden permanent gelöscht.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteAccount} className="bg-red-600 hover:bg-red-700">
+                          Account löschen
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
               </div>
             </div>
           </div>

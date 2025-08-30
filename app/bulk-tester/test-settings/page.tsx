@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog"
 import { ArrowLeft, Plus, Trash2, Sparkles, Play } from "lucide-react"
 import { Slider } from "@/components/ui/slider"
+import { useAuth } from "@/contexts/auth-context"
 
 export default function TestSettingsPage() {
   const [testQuestions, setTestQuestions] = useState([
@@ -30,6 +31,14 @@ export default function TestSettingsPage() {
     tone: "professional",
     domain: "sales",
   })
+  const [testId, setTestId] = useState<string | null>(null)
+  const { user } = useAuth()
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const id = urlParams.get("testId")
+    setTestId(id)
+  }, [])
 
   const addQuestion = () => {
     if (newQuestion.trim()) {
@@ -55,8 +64,30 @@ export default function TestSettingsPage() {
     setIsGenerateModalOpen(false)
   }
 
-  const startEvaluation = () => {
-    window.location.href = "/bulk-tester/run/evaluation-123"
+  const startEvaluation = async () => {
+    if (!testId || !user) return
+
+    try {
+      // Update bulk test with questions and configuration
+      const response = await fetch(`/api/bulk-tests/${testId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          test_data: testQuestions,
+          status: "running",
+        }),
+      })
+
+      if (response.ok) {
+        window.location.href = `/bulk-tester/run/${testId}`
+      } else {
+        console.error("Failed to update bulk test")
+      }
+    } catch (error) {
+      console.error("Error starting evaluation:", error)
+    }
   }
 
   return (
@@ -239,7 +270,7 @@ export default function TestSettingsPage() {
       <div className="flex justify-center">
         <Button
           onClick={startEvaluation}
-          disabled={testQuestions.length === 0}
+          disabled={testQuestions.length === 0 || !testId}
           className="bg-gradient-accent hover:bg-gradient-accent/90 text-white hover-scale px-8 py-3 text-lg"
         >
           <Play className="mr-2 h-5 w-5" />

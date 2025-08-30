@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
+import { shouldRedirectToHttps, domainConfig } from "./lib/config/domain"
 
 // Define protected routes that require authentication
 const protectedRoutes = [
@@ -32,6 +33,12 @@ const publicRoutes = [
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
+  if (shouldRedirectToHttps(request)) {
+    const httpsUrl = new URL(request.url)
+    httpsUrl.protocol = "https:"
+    return NextResponse.redirect(httpsUrl)
+  }
+
   // Check if the current path is a protected route
   const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route))
 
@@ -43,14 +50,15 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // Get authentication status from request headers or cookies
-  // Since we're using localStorage, we'll need to handle this on the client side
-  // For now, we'll let the client-side auth handle redirects
-
   if (isProtectedRoute) {
     // Add a header to indicate this is a protected route
     const response = NextResponse.next()
     response.headers.set("x-protected-route", "true")
+    if (domainConfig.isProduction) {
+      response.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+      response.headers.set("X-Frame-Options", "DENY")
+      response.headers.set("X-Content-Type-Options", "nosniff")
+    }
     return response
   }
 

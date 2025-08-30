@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Bot, Eye, EyeOff, ArrowLeft } from "lucide-react"
+import { Bot, Eye, EyeOff, ArrowLeft } from 'lucide-react'
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
@@ -98,29 +98,49 @@ export default function RegisterPage() {
     setError("")
 
     try {
-      // Simulate Google OAuth flow
-      await new Promise((resolve) => setTimeout(resolve, 1500))
+      if (typeof window !== 'undefined' && window.google) {
+        window.google.accounts.id.initialize({
+          client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
+          callback: async (response: any) => {
+            try {
+              const result = await fetch('/api/auth/google', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ token: response.credential }),
+              })
 
-      // Mock successful Google registration
-      const googleUser = {
-        email: "user@gmail.com",
-        name: "Google User",
-        plan: "starter",
-        provider: "google",
+              const data = await result.json()
+
+              if (data.success) {
+                localStorage.setItem("buildro_logged_in", "true")
+                localStorage.setItem("buildro_user", JSON.stringify(data.user))
+
+                toast({
+                  title: "Mit Google registriert",
+                  description: "Willkommen bei buildro.ai! Ihr Konto wurde erstellt.",
+                })
+
+                router.push("/")
+              } else {
+                setError(data.error || "Google-Registrierung fehlgeschlagen")
+              }
+            } catch (err) {
+              setError("Google-Registrierung fehlgeschlagen. Bitte versuchen Sie es erneut.")
+            } finally {
+              setIsLoading(false)
+            }
+          }
+        })
+
+        window.google.accounts.id.prompt()
+      } else {
+        // Fallback for when Google SDK is not loaded
+        setError("Google-Registrierung ist derzeit nicht verfügbar.")
       }
-
-      localStorage.setItem("buildro_logged_in", "true")
-      localStorage.setItem("buildro_user", JSON.stringify(googleUser))
-
-      toast({
-        title: "Mit Google registriert",
-        description: "Willkommen bei buildro.ai! Ihr Konto wurde erstellt.",
-      })
-
-      router.push("/")
     } catch (err) {
       setError("Google-Registrierung fehlgeschlagen. Bitte versuchen Sie es erneut.")
-    } finally {
       setIsLoading(false)
     }
   }

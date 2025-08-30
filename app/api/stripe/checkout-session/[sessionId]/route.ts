@@ -1,4 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server"
+import Stripe from "stripe"
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: "2024-06-20",
+})
 
 // Mock agent data for demo
 const mockAgents = {
@@ -7,7 +12,7 @@ const mockAgents = {
     title: "Customer Support Pro",
     description:
       "Ein fortschrittlicher KI-Agent für professionellen Kundensupport mit Multi-Sprach-Unterstützung und Ticket-Management.",
-    price: 29.99,
+    price: 1299,
     rating: 4.8,
     image: "/customer-support-robot.png",
     category: "Support",
@@ -18,13 +23,12 @@ const mockAgents = {
     title: "Sales Assistant Elite",
     description:
       "Maximiere deine Verkaufsergebnisse mit diesem intelligenten Sales-Agent, der Leads qualifiziert und Deals abschließt.",
-    price: 49.99,
+    price: 2499,
     rating: 4.9,
     image: "/sales-robot-assistant.png",
     category: "Sales",
     supportEmail: "support@buildro.ai",
   },
-  // Add other agents as needed
 }
 
 export async function GET(request: NextRequest, { params }: { params: { sessionId: string } }) {
@@ -33,27 +37,7 @@ export async function GET(request: NextRequest, { params }: { params: { sessionI
     const url = new URL(request.url)
     const agentId = url.searchParams.get("agent_id")
 
-    // In real implementation, retrieve session from Stripe:
-    // const session = await stripe.checkout.sessions.retrieve(sessionId)
-
-    // Mock session data
-    const mockSession = {
-      id: sessionId,
-      payment_status: "paid",
-      amount_total:
-        agentId && mockAgents[agentId as keyof typeof mockAgents]
-          ? Math.round(mockAgents[agentId as keyof typeof mockAgents].price * 100)
-          : 2999,
-      currency: "eur",
-      customer_details: {
-        email: "customer@example.com",
-        name: "Max Mustermann",
-      },
-      created: Math.floor(Date.now() / 1000),
-      metadata: {
-        agentId: agentId || "1",
-      },
-    }
+    const session = await stripe.checkout.sessions.retrieve(sessionId)
 
     // Get agent data
     const agent =
@@ -63,7 +47,15 @@ export async function GET(request: NextRequest, { params }: { params: { sessionI
 
     // Create purchase record (in real app, save to database)
     const purchaseData = {
-      session: mockSession,
+      session: {
+        id: session.id,
+        payment_status: session.payment_status,
+        amount_total: session.amount_total,
+        currency: session.currency,
+        customer_details: session.customer_details,
+        created: session.created,
+        metadata: session.metadata,
+      },
       agent: agent,
       purchaseDate: new Date().toISOString(),
       downloadUrl: `/api/marketplace/download/${agent.id}`,

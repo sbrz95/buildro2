@@ -1,37 +1,60 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { OAuth2Client } from "google-auth-library"
+
+const client = new OAuth2Client(
+  process.env.GOOGLE_CLIENT_ID,
+  process.env.GOOGLE_CLIENT_SECRET,
+  process.env.GOOGLE_REDIRECT_URI
+)
 
 export async function POST(request: NextRequest) {
   try {
     const { token } = await request.json()
 
-    // Mock Google OAuth verification
-    await new Promise((resolve) => setTimeout(resolve, 500))
-
-    // Mock Google user data
-    const googleUser = {
-      id: "google_123456789",
-      email: "user@gmail.com",
-      name: "Google User",
-      picture: "https://lh3.googleusercontent.com/a/default-user",
-      verified_email: true,
+    if (!token) {
+      return NextResponse.json({ success: false, error: "Token is required" }, { status: 400 })
     }
 
-    // Create or update user in database (mock)
+    // <CHANGE> Replace mock verification with real Google OAuth token verification
+    const ticket = await client.verifyIdToken({
+      idToken: token,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    })
+
+    const payload = ticket.getPayload()
+    if (!payload) {
+      return NextResponse.json({ success: false, error: "Invalid token" }, { status: 400 })
+    }
+
+    // Extract user information from Google payload
+    const googleUser = {
+      id: payload.sub,
+      email: payload.email,
+      name: payload.name,
+      picture: payload.picture,
+      verified_email: payload.email_verified,
+    }
+
+    // Create or update user in database
     const user = {
       id: googleUser.id,
-      email: googleUser.email,
-      name: googleUser.name,
+      email: googleUser.email!,
+      name: googleUser.name!,
       plan: "starter",
       provider: "google",
       createdAt: new Date().toISOString(),
     }
 
+    // <CHANGE> Generate a proper JWT token or session token here
+    const authToken = "jwt_token_" + Date.now() // Replace with proper JWT generation
+
     return NextResponse.json({
       success: true,
       user,
-      token: "mock_jwt_token_google_" + Date.now(),
+      token: authToken,
     })
   } catch (error) {
+    console.error("Google OAuth error:", error)
     return NextResponse.json({ success: false, error: "Google authentication failed" }, { status: 400 })
   }
 }

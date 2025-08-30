@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -8,9 +8,17 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, ArrowRight, Upload, Shield, Info } from "lucide-react"
+import { ArrowLeft, ArrowRight, Shield, Info } from "lucide-react"
 import { BackButton } from "@/components/ui/back-button"
+import { useAuth } from "@/contexts/auth-context"
+
+interface Agent {
+  id: string
+  name: string
+  description: string
+  model: string
+  updated_at: string
+}
 
 interface FormData {
   // Step 1
@@ -27,13 +35,19 @@ interface FormData {
   // Step 3
   noLogging: boolean
   anonymizeData: boolean
+  isPublic: boolean
 }
 
 export default function NewDemoPage() {
   const [currentStep, setCurrentStep] = useState(1)
+  const [agents, setAgents] = useState<Agent[]>([])
+  const [loading, setLoading] = useState(true)
+  const [creating, setCreating] = useState(false)
+  const { user } = useAuth()
+
   const [formData, setFormData] = useState<FormData>({
     selectedAgent: "",
-    selectedVersion: "",
+    selectedVersion: "v1.0",
     title: "",
     description: "",
     logo: null,
@@ -41,13 +55,28 @@ export default function NewDemoPage() {
     backgroundColor: "#FFFFFF",
     noLogging: false,
     anonymizeData: false,
+    isPublic: true,
   })
 
-  const agents = [
-    { id: "sales-agent", name: "Sales Agent", versions: ["v1.0", "v1.1", "v1.2"] },
-    { id: "support-bot", name: "Support Bot", versions: ["v2.0", "v2.1"] },
-    { id: "custom-agent", name: "Custom Agent", versions: ["v1.0"] },
-  ]
+  useEffect(() => {
+    const fetchAgents = async () => {
+      if (!user) return
+
+      try {
+        const response = await fetch("/api/agents")
+        if (response.ok) {
+          const data = await response.json()
+          setAgents(data.agents || [])
+        }
+      } catch (error) {
+        console.error("Error fetching agents:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchAgents()
+  }, [user])
 
   const handleNext = () => {
     if (currentStep < 3) setCurrentStep(currentStep + 1)
@@ -57,11 +86,41 @@ export default function NewDemoPage() {
     if (currentStep > 1) setCurrentStep(currentStep - 1)
   }
 
-  const handleCreate = () => {
-    // Create demo with all form data
-    const demoId = `demo-${Date.now()}`
-    console.log("Creating demo with data:", formData)
-    window.location.href = `/demo/${demoId}`
+  const handleCreate = async () => {
+    if (!user) return
+
+    setCreating(true)
+    try {
+      const response = await fetch("/api/demos", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: formData.title,
+          description: formData.description,
+          agentId: formData.selectedAgent,
+          isPublic: formData.isPublic,
+          settings: {
+            primaryColor: formData.primaryColor,
+            backgroundColor: formData.backgroundColor,
+            noLogging: formData.noLogging,
+            anonymizeData: formData.anonymizeData,
+          },
+        }),
+      })
+
+      if (response.ok) {
+        const { demo } = await response.json()
+        window.location.href = `/demo/${demo.id}`
+      } else {
+        console.error("Failed to create demo")
+      }
+    } catch (error) {
+      console.error("Error creating demo:", error)
+    } finally {
+      setCreating(false)
+    }
   }
 
   const isStepValid = (step: number) => {
@@ -111,149 +170,102 @@ export default function NewDemoPage() {
         <Card>
           <CardHeader>
             <CardTitle>Agent auswählen</CardTitle>
-            <CardDescription>Wähle den Agenten und die Version für deine Demo</CardDescription>
+            <CardDescription>Wähle den Agenten für deine Demo</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="agent">Agent *</Label>
-                <Select
-                  value={formData.selectedAgent}
-                  onValueChange={(value) => setFormData({ ...formData, selectedAgent: value, selectedVersion: "" })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Agent wählen" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {agents.map((agent) => (
+            <div className="space-y-2">
+              <Label htmlFor="agent">Agent *</Label>
+              <Select
+                value={formData.selectedAgent}
+                onValueChange={(value) => setFormData({ ...formData, selectedAgent: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Agent wählen" />
+                </SelectTrigger>
+                <SelectContent>
+                  {loading ? (
+                    <SelectItem value="" disabled>
+                      Lade Agenten...
+                    </SelectItem>
+                  ) : agents.length > 0 ? (
+                    agents.map((agent) => (
                       <SelectItem key={agent.id} value={agent.id}>
                         {agent.name}
                       </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="version">Version *</Label>
-                <Select
-                  value={formData.selectedVersion}
-                  onValueChange={(value) => setFormData({ ...formData, selectedVersion: value })}
-                  disabled={!formData.selectedAgent}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Version wählen" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {formData.selectedAgent &&
-                      agents
-                        .find((a) => a.id === formData.selectedAgent)
-                        ?.versions.map((version) => (
-                          <SelectItem key={version} value={version}>
-                            {version}
-                            {version === agents.find((a) => a.id === formData.selectedAgent)?.versions.slice(-1)[0] && (
-                              <Badge variant="secondary" className="ml-2">
-                                Latest
-                              </Badge>
-                            )}
-                          </SelectItem>
-                        ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                    ))
+                  ) : (
+                    <SelectItem value="" disabled>
+                      Keine Agenten gefunden
+                    </SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
             </div>
+
+            {formData.selectedAgent && (
+              <div className="bg-muted p-4 rounded-lg">
+                <h4 className="font-medium mb-2">Agent Details</h4>
+                <div className="text-sm text-muted-foreground space-y-1">
+                  {(() => {
+                    const selectedAgent = agents.find((a) => a.id === formData.selectedAgent)
+                    return selectedAgent ? (
+                      <>
+                        <p>Name: {selectedAgent.name}</p>
+                        <p>Modell: {selectedAgent.model}</p>
+                        <p>Zuletzt bearbeitet: {new Date(selectedAgent.updated_at).toLocaleDateString()}</p>
+                      </>
+                    ) : (
+                      <p>Agent nicht gefunden</p>
+                    )
+                  })()}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
 
       {currentStep === 2 && (
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Demo-Details</CardTitle>
-              <CardDescription>Konfiguriere Titel, Beschreibung und Branding</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="title">Titel *</Label>
-                <Input
-                  id="title"
-                  placeholder="z.B. Sales Demo v1.0"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  required
-                />
-              </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Demo-Details</CardTitle>
+            <CardDescription>Konfiguriere Titel und Beschreibung</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="title">Titel *</Label>
+              <Input
+                id="title"
+                placeholder="z.B. Sales Demo v1.0"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                required
+              />
+            </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="description">Beschreibung</Label>
-                <Textarea
-                  id="description"
-                  placeholder="Beschreibe deine Demo (Markdown unterstützt)"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  rows={4}
-                />
-                <p className="text-xs text-muted-foreground">Markdown-Formatierung wird unterstützt</p>
-              </div>
-            </CardContent>
-          </Card>
+            <div className="space-y-2">
+              <Label htmlFor="description">Beschreibung</Label>
+              <Textarea
+                id="description"
+                placeholder="Beschreibe deine Demo"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                rows={4}
+              />
+            </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Branding-Optionen</CardTitle>
-              <CardDescription>Passe das Erscheinungsbild deiner Demo an</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>Logo hochladen</Label>
-                <div className="border-2 border-dashed border-muted rounded-lg p-6 text-center">
-                  <Upload className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground">Klicke hier oder ziehe eine Datei hinein</p>
-                  <p className="text-xs text-muted-foreground mt-1">PNG, JPG bis 2MB</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="primaryColor">Primärfarbe</Label>
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="color"
-                      id="primaryColor"
-                      value={formData.primaryColor}
-                      onChange={(e) => setFormData({ ...formData, primaryColor: e.target.value })}
-                      className="w-12 h-10 rounded border"
-                    />
-                    <Input
-                      value={formData.primaryColor}
-                      onChange={(e) => setFormData({ ...formData, primaryColor: e.target.value })}
-                      placeholder="#A855F7"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="backgroundColor">Hintergrundfarbe</Label>
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="color"
-                      id="backgroundColor"
-                      value={formData.backgroundColor}
-                      onChange={(e) => setFormData({ ...formData, backgroundColor: e.target.value })}
-                      className="w-12 h-10 rounded border"
-                    />
-                    <Input
-                      value={formData.backgroundColor}
-                      onChange={(e) => setFormData({ ...formData, backgroundColor: e.target.value })}
-                      placeholder="#FFFFFF"
-                    />
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="isPublic"
+                checked={formData.isPublic}
+                onCheckedChange={(checked) => setFormData({ ...formData, isPublic: checked as boolean })}
+              />
+              <Label htmlFor="isPublic" className="text-sm font-medium">
+                Demo öffentlich verfügbar machen
+              </Label>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {currentStep === 3 && (
@@ -320,7 +332,7 @@ export default function NewDemoPage() {
         <Button
           variant="outline"
           onClick={handleBack}
-          disabled={currentStep === 1}
+          disabled={currentStep === 1 || creating}
           className="hover-scale bg-transparent"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -339,10 +351,10 @@ export default function NewDemoPage() {
         ) : (
           <Button
             onClick={handleCreate}
-            disabled={!isStepValid(currentStep)}
+            disabled={!isStepValid(currentStep) || creating}
             className="bg-gradient-accent hover:bg-gradient-accent/90 text-white hover-scale"
           >
-            Demo erstellen
+            {creating ? "Erstelle Demo..." : "Demo erstellen"}
           </Button>
         )}
       </div>

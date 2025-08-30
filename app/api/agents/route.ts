@@ -14,10 +14,37 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    const { data: userData, error: userError } = await supabase.from("users").select("role").eq("id", user.id).single()
+
+    if (userError) {
+      console.error("Error fetching user role:", userError)
+      return NextResponse.json({ error: "Failed to verify user permissions" }, { status: 500 })
+    }
+
     const { searchParams } = new URL(request.url)
     const projectId = searchParams.get("project_id")
+    const isAdmin = userData?.role === "admin" || userData?.role === "super_admin"
 
-    const agents = await getUserAgents(user.id, projectId || undefined)
+    let agents
+
+    if (isAdmin) {
+      const { data: allAgents, error: agentsError } = await supabase
+        .from("agents")
+        .select(`
+          *,
+          users!agents_user_id_fkey(name, email)
+        `)
+        .order("created_at", { ascending: false })
+
+      if (agentsError) {
+        console.error("Error fetching all agents:", agentsError)
+        return NextResponse.json({ error: "Failed to fetch agents" }, { status: 500 })
+      }
+
+      agents = allAgents || []
+    } else {
+      agents = await getUserAgents(user.id, projectId || undefined)
+    }
 
     // Transform database format to expected frontend format
     const transformedAgents = agents.map((agent) => ({
@@ -29,8 +56,16 @@ export async function GET(request: NextRequest) {
       max_tokens: agent.max_tokens,
       system_instructions: agent.system_instructions,
       prompt: agent.prompt,
-      createdAt: agent.created_at,
-      updatedAt: agent.updated_at,
+      created_at: agent.created_at,
+      updated_at: agent.updated_at,
+      user_id: agent.user_id,
+      creator:
+        isAdmin && agent.users
+          ? {
+              name: agent.users.name,
+              email: agent.users.email,
+            }
+          : undefined,
       // Mock versions for compatibility with existing frontend
       versions: [
         {
@@ -41,7 +76,11 @@ export async function GET(request: NextRequest) {
       ],
     }))
 
-    return NextResponse.json({ agents: transformedAgents })
+    return NextResponse.json({
+      agents: transformedAgents,
+      isAdmin,
+      totalCount: transformedAgents.length,
+    })
   } catch (error) {
     console.error("Error fetching agents:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
@@ -70,22 +109,26 @@ export async function POST(request: NextRequest) {
       max_tokens = 1000,
       system_instructions,
       prompt,
+      system_prompt,
+      settings,
+      status = "active",
     } = body
 
-    if (!project_id || !name) {
-      return NextResponse.json({ error: "Project ID and agent name are required" }, { status: 400 })
+    if (!name) {
+      return NextResponse.json({ error: "Agent name is required" }, { status: 400 })
     }
 
     const agentData = {
-      project_id,
+      project_id: project_id || null,
       user_id: user.id,
       name,
       description,
       model,
       temperature,
       max_tokens,
-      system_instructions,
+      system_instructions: system_instructions || system_prompt,
       prompt,
+      configuration: settings ? JSON.stringify(settings) : null,
     }
 
     const agent = await createAgent(agentData)
@@ -104,8 +147,9 @@ export async function POST(request: NextRequest) {
       max_tokens: agent.max_tokens,
       system_instructions: agent.system_instructions,
       prompt: agent.prompt,
-      createdAt: agent.created_at,
-      updatedAt: agent.updated_at,
+      created_at: agent.created_at,
+      updated_at: agent.updated_at,
+      user_id: agent.user_id,
       versions: [
         {
           version: "v1.0",

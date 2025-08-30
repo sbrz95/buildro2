@@ -6,18 +6,26 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Plus, Search, Bot, Calendar, MoreHorizontal, Edit, FolderOpen, Share, Trash2 } from "lucide-react"
+import { Plus, Search, Bot, Calendar, MoreHorizontal, Edit, FolderOpen, Share, Trash2, Shield } from "lucide-react"
 import Link from "next/link"
 import type { Agent, Project } from "@/lib/supabase/client"
 import { ShareAgentDialog } from "@/components/share-agent-dialog"
 
+interface ExtendedAgent extends Agent {
+  creator?: {
+    name: string
+    email: string
+  }
+}
+
 export default function BuildPage() {
-  const [agents, setAgents] = useState<Agent[]>([])
+  const [agents, setAgents] = useState<ExtendedAgent[]>([])
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [shareDialogOpen, setShareDialogOpen] = useState(false)
-  const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null)
+  const [selectedAgent, setSelectedAgent] = useState<ExtendedAgent | null>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
 
   useEffect(() => {
     fetchData()
@@ -33,6 +41,7 @@ export default function BuildPage() {
       if (agentsResponse.ok) {
         const agentsData = await agentsResponse.json()
         setAgents(agentsData.agents || [])
+        setIsAdmin(agentsData.isAdmin || false)
       }
 
       if (projectsResponse.ok) {
@@ -67,7 +76,7 @@ export default function BuildPage() {
     console.log("Move agent to folder:", agentId)
   }
 
-  const handleShareAgent = (agent: Agent) => {
+  const handleShareAgent = (agent: ExtendedAgent) => {
     setSelectedAgent(agent)
     setShareDialogOpen(true)
   }
@@ -90,8 +99,18 @@ export default function BuildPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Build</h1>
-          <p className="text-muted-foreground">Erstelle und verwalte deine KI-Agenten</p>
+          <h1 className="text-3xl font-bold">
+            Build
+            {isAdmin && (
+              <Badge variant="secondary" className="ml-2 bg-gradient-accent text-white">
+                <Shield className="w-3 h-3 mr-1" />
+                Admin
+              </Badge>
+            )}
+          </h1>
+          <p className="text-muted-foreground">
+            {isAdmin ? "Verwalte alle KI-Agenten (Admin-Ansicht)" : "Erstelle und verwalte deine KI-Agenten"}
+          </p>
         </div>
         <Link href="/projects">
           <Button variant="outline" className="mr-2 bg-transparent">
@@ -110,6 +129,11 @@ export default function BuildPage() {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
+        {isAdmin && (
+          <Badge variant="outline" className="text-muted-foreground">
+            {agents.length} Agenten insgesamt
+          </Badge>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -177,6 +201,11 @@ export default function BuildPage() {
                   </div>
                 </div>
                 <CardDescription>{agent.description || "Keine Beschreibung"}</CardDescription>
+                {isAdmin && agent.creator && (
+                  <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
+                    <strong>Ersteller:</strong> {agent.creator.name} ({agent.creator.email})
+                  </div>
+                )}
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-between text-sm text-muted-foreground">

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -8,6 +8,15 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ArrowLeft, ArrowRight } from "lucide-react"
 import { BackButton } from "@/components/ui/back-button"
+import { useAuth } from "@/contexts/auth-context"
+
+interface Agent {
+  id: string
+  name: string
+  description: string
+  model: string
+  updated_at: string
+}
 
 export default function AssistantBulkTesterPage() {
   const [currentStep, setCurrentStep] = useState(1)
@@ -16,13 +25,57 @@ export default function AssistantBulkTesterPage() {
     apiKey: "",
     selectedBuild: "",
   })
+  const [agents, setAgents] = useState<Agent[]>([])
+  const [loading, setLoading] = useState(true)
+  const { user } = useAuth()
 
-  const handleNext = () => {
+  useEffect(() => {
+    const fetchAgents = async () => {
+      if (!user) return
+
+      try {
+        const response = await fetch("/api/agents")
+        if (response.ok) {
+          const data = await response.json()
+          setAgents(data.agents || [])
+        }
+      } catch (error) {
+        console.error("Error fetching agents:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchAgents()
+  }, [user])
+
+  const handleNext = async () => {
     if (currentStep < 2) {
       setCurrentStep(currentStep + 1)
     } else {
-      // Navigate to test settings
-      window.location.href = "/bulk-tester/test-settings"
+      try {
+        const response = await fetch("/api/bulk-tests", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: formData.evaluationName,
+            agentId: formData.selectedBuild,
+            testType: "assistant",
+            testData: [],
+          }),
+        })
+
+        if (response.ok) {
+          const { bulkTest } = await response.json()
+          window.location.href = `/bulk-tester/test-settings?testId=${bulkTest.id}`
+        } else {
+          console.error("Failed to create bulk test")
+        }
+      } catch (error) {
+        console.error("Error creating bulk test:", error)
+      }
     }
   }
 
@@ -93,21 +146,44 @@ export default function AssistantBulkTesterPage() {
                     <SelectValue placeholder="Build wählen" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="sales-agent">Sales Agent</SelectItem>
-                    <SelectItem value="support-bot">Support Bot</SelectItem>
-                    <SelectItem value="custom-agent">Custom Agent</SelectItem>
+                    {loading ? (
+                      <SelectItem value="" disabled>
+                        Lade Agenten...
+                      </SelectItem>
+                    ) : agents.length > 0 ? (
+                      agents.map((agent) => (
+                        <SelectItem key={agent.id} value={agent.id}>
+                          {agent.name}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="" disabled>
+                        Keine Agenten gefunden
+                      </SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
 
-              <div className="bg-muted p-4 rounded-lg">
-                <h4 className="font-medium mb-2">Build Details</h4>
-                <div className="text-sm text-muted-foreground space-y-1">
-                  <p>Typ: Sales Agent</p>
-                  <p>Modell: GPT-4</p>
-                  <p>Zuletzt bearbeitet: vor 2 Stunden</p>
+              {formData.selectedBuild && (
+                <div className="bg-muted p-4 rounded-lg">
+                  <h4 className="font-medium mb-2">Build Details</h4>
+                  <div className="text-sm text-muted-foreground space-y-1">
+                    {(() => {
+                      const selectedAgent = agents.find((a) => a.id === formData.selectedBuild)
+                      return selectedAgent ? (
+                        <>
+                          <p>Name: {selectedAgent.name}</p>
+                          <p>Modell: {selectedAgent.model}</p>
+                          <p>Zuletzt bearbeitet: {new Date(selectedAgent.updated_at).toLocaleDateString()}</p>
+                        </>
+                      ) : (
+                        <p>Agent nicht gefunden</p>
+                      )
+                    })()}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           )}
         </CardContent>

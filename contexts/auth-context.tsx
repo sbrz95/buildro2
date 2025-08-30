@@ -36,27 +36,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
+    console.log("[v0] AuthProvider: Initializing authentication check")
+
     // Check for existing authentication on mount
     const checkAuth = () => {
       try {
         const isLoggedIn = localStorage.getItem("buildro_logged_in") === "true"
         const userData = localStorage.getItem("buildro_user")
 
+        console.log("[v0] AuthProvider: Checking auth state", { isLoggedIn, hasUserData: !!userData })
+
         if (isLoggedIn && userData) {
           const parsedUser = JSON.parse(userData)
+          console.log("[v0] AuthProvider: Setting user from localStorage", parsedUser)
           setUser(parsedUser)
         }
       } catch (error) {
-        console.error("Error checking authentication:", error)
+        console.error("[v0] AuthProvider: Error checking authentication:", error)
         // Clear invalid data
         localStorage.removeItem("buildro_logged_in")
         localStorage.removeItem("buildro_user")
       } finally {
+        console.log("[v0] AuthProvider: Setting loading to false")
         setIsLoading(false)
       }
     }
 
-    checkAuth()
+    // Add a small delay to ensure DOM is ready
+    const timer = setTimeout(checkAuth, 100)
+
+    // Fallback timeout to prevent infinite loading
+    const fallbackTimer = setTimeout(() => {
+      console.log("[v0] AuthProvider: Fallback timeout - forcing loading to false")
+      setIsLoading(false)
+    }, 2000)
+
+    return () => {
+      clearTimeout(timer)
+      clearTimeout(fallbackTimer)
+    }
   }, [])
 
   const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {

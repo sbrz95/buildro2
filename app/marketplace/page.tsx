@@ -42,6 +42,7 @@ import {
 import { toast } from "@/hooks/use-toast"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
+import { BackButton } from "@/components/ui/back-button"
 
 // Mock data for marketplace agents
 const mockAgents = [
@@ -427,6 +428,8 @@ export default function MarketplacePage() {
 
   return (
     <div className="page-container">
+      <BackButton href="/" />
+
       {/* Header */}
       <div className="flex flex-col space-y-6 mb-8">
         <div className="flex items-center justify-between">

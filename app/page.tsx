@@ -162,30 +162,42 @@ function MarketingLanding() {
 
   return (
     <div className="min-h-screen">
-      <div className="max-w-7xl mx-auto text-center section-spacing pt-16">
+      <div className="max-w-7xl mx-auto text-center section-spacing pt-8 sm:pt-12 lg:pt-16 page-container relative overflow-hidden">
+        <div className="absolute inset-0 -z-10">
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-gradient-accent opacity-10 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-gradient-accent opacity-10 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        </div>
+
         <div className="content-spacing">
-          <div className="w-16 h-16 bg-gradient-accent rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-glow">
-            <Bot className="h-8 w-8 text-white" />
+          <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-accent rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6 shadow-glow-intense float-animation">
+            <Bot className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
           </div>
-          <h1 className="text-5xl md:text-6xl font-bold mb-6">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 sm:mb-6 px-2 leading-tight">
             Erstelle und verkaufe <span className="text-gradient-accent">KI-Agenten</span>
             <br />
-            ohne Code
+            <span className="relative">
+              ohne Code
+              <div className="absolute -bottom-2 left-0 right-0 h-1 bg-gradient-accent opacity-30 blur-sm"></div>
+            </span>
           </h1>
-          <p className="text-xl text-muted-foreground mb-8 max-w-3xl mx-auto">
+          <p className="text-lg sm:text-xl text-muted-foreground mb-6 sm:mb-8 max-w-3xl mx-auto px-2 leading-relaxed">
             Automatisiere Prozesse und baue leistungsstarke Agenten ohne technische Kenntnisse. buildro.ai ist die
             führende No-Code-Plattform für intelligente KI-Automatisierung.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-2">
             <Button
               size="lg"
-              className="bg-gradient-accent hover:bg-gradient-accent/90 text-white px-8 py-3 text-lg shadow-glow"
+              className="bg-gradient-accent hover:bg-gradient-accent/90 text-white px-6 sm:px-8 py-3 text-base sm:text-lg shadow-glow-intense hover-glow pulse-glow w-full sm:w-auto font-semibold"
               onClick={scrollToPricing}
             >
               Jetzt starten
             </Button>
             <Link href="/public-marketplace">
-              <Button size="lg" variant="outline" className="px-8 py-3 text-lg bg-transparent">
+              <Button
+                size="lg"
+                variant="outline"
+                className="px-6 sm:px-8 py-3 text-base sm:text-lg bg-transparent hover-glow border-2 w-full sm:w-auto font-medium"
+              >
                 Marketplace erkunden
               </Button>
             </Link>
@@ -193,7 +205,7 @@ function MarketingLanding() {
         </div>
       </div>
 
-      <div id="features" className="max-w-7xl mx-auto section-spacing py-24">
+      <div id="features" className="max-w-7xl mx-auto section-spacing py-12 sm:py-16 lg:py-24 page-container">
         <div className="text-center content-spacing">
           <h2 className="text-3xl font-bold mb-4">Funktionen, die dich begeistern!</h2>
           <p className="text-xl text-muted-foreground mb-12">
@@ -202,9 +214,10 @@ function MarketingLanding() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
-          <Card className="card-container text-center">
-            <CardHeader className="p-0">
-              <div className="w-12 h-12 bg-gradient-accent rounded-lg flex items-center justify-center mx-auto mb-4">
+          <Card className="card-container text-center hover-glow group relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-accent opacity-0 group-hover:opacity-5 transition-opacity duration-300"></div>
+            <CardHeader className="p-0 relative z-10">
+              <div className="w-12 h-12 bg-gradient-accent rounded-lg flex items-center justify-center mx-auto mb-4 shadow-glow group-hover:shadow-glow-intense transition-all duration-300">
                 <Hammer className="h-6 w-6 text-white" />
               </div>
               <CardTitle className="mb-2">No-Code Editor</CardTitle>
@@ -214,9 +227,10 @@ function MarketingLanding() {
             </CardHeader>
           </Card>
 
-          <Card className="card-container text-center">
-            <CardHeader className="p-0">
-              <div className="w-12 h-12 bg-gradient-accent rounded-lg flex items-center justify-center mx-auto mb-4">
+          <Card className="card-container text-center hover-glow group relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-accent opacity-0 group-hover:opacity-5 transition-opacity duration-300"></div>
+            <CardHeader className="p-0 relative z-10">
+              <div className="w-12 h-12 bg-gradient-accent rounded-lg flex items-center justify-center mx-auto mb-4 shadow-glow group-hover:shadow-glow-intense transition-all duration-300">
                 <Zap className="h-6 w-6 text-white" />
               </div>
               <CardTitle className="mb-2">Automatisierung</CardTitle>
@@ -226,9 +240,10 @@ function MarketingLanding() {
             </CardHeader>
           </Card>
 
-          <Card className="card-container text-center">
-            <CardHeader className="p-0">
-              <div className="w-12 h-12 bg-gradient-accent rounded-lg flex items-center justify-center mx-auto mb-4">
+          <Card className="card-container text-center hover-glow group relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-accent opacity-0 group-hover:opacity-5 transition-opacity duration-300"></div>
+            <CardHeader className="p-0 relative z-10">
+              <div className="w-12 h-12 bg-gradient-accent rounded-lg flex items-center justify-center mx-auto mb-4 shadow-glow group-hover:shadow-glow-intense transition-all duration-300">
                 <Bot className="h-6 w-6 text-white" />
               </div>
               <CardTitle className="mb-2">Verkaufsplattform</CardTitle>
@@ -238,9 +253,10 @@ function MarketingLanding() {
             </CardHeader>
           </Card>
 
-          <Card className="card-container text-center">
-            <CardHeader className="p-0">
-              <div className="w-12 h-12 bg-gradient-accent rounded-lg flex items-center justify-center mx-auto mb-4">
+          <Card className="card-container text-center hover-glow group relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-accent opacity-0 group-hover:opacity-5 transition-opacity duration-300"></div>
+            <CardHeader className="p-0 relative z-10">
+              <div className="w-12 h-12 bg-gradient-accent rounded-lg flex items-center justify-center mx-auto mb-4 shadow-glow group-hover:shadow-glow-intense transition-all duration-300">
                 <TestTube className="h-6 w-6 text-white" />
               </div>
               <CardTitle className="mb-2">API-Integration</CardTitle>
@@ -250,14 +266,14 @@ function MarketingLanding() {
         </div>
       </div>
 
-      <div id="pricing" className="max-w-7xl mx-auto section-spacing py-24">
+      <div id="pricing" className="max-w-7xl mx-auto section-spacing py-12 sm:py-16 lg:py-24 page-container">
         <div className="text-center content-spacing">
           <h2 className="text-3xl font-bold mb-4">Preise für jedes Budget</h2>
           <p className="text-xl text-muted-foreground mb-12">Wähle den Plan, der zu deinem Business passt</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <Card className="card-container">
+          <Card className="card-container hover-glow">
             <CardHeader className="text-center p-0 pb-6">
               <CardTitle className="text-2xl mb-2">Starter Plan</CardTitle>
               <div className="text-4xl font-bold mb-2">
@@ -280,30 +296,33 @@ function MarketingLanding() {
               </div>
             </div>
             <Link href="/subscribe">
-              <Button className="w-full bg-transparent" variant="outline">
+              <Button className="w-full bg-transparent hover-glow" variant="outline">
                 Jetzt starten
               </Button>
             </Link>
           </Card>
 
-          <Card className="card-container border-2 border-gradient-accent relative shadow-glow">
+          <Card className="card-container border-2 border-gradient-accent relative shadow-glow-intense hover-glow group">
             <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-              <div className="bg-gradient-accent text-white px-4 py-1 rounded-full text-sm font-medium shadow-glow">
+              <div className="bg-gradient-accent text-white px-4 py-1 rounded-full text-sm font-medium shadow-glow pulse-glow">
                 Meist gewählt
               </div>
             </div>
-            <CardHeader className="text-center p-0 pb-6">
+            <div className="absolute inset-0 bg-gradient-accent opacity-5 rounded-lg group-hover:opacity-10 transition-opacity duration-300"></div>
+            <CardHeader className="text-center p-0 pb-6 relative z-10">
               <CardTitle className="text-2xl mb-2">Für AI Experten</CardTitle>
               <div className="flex items-center justify-center gap-2 mb-2">
                 <div className="text-4xl font-bold">
                   €69<span className="text-lg font-normal text-muted-foreground">/Monat</span>
                 </div>
-                <div className="bg-red-100 text-red-600 px-2 py-1 rounded text-sm font-medium">75% Rabatt</div>
+                <div className="bg-red-100 text-red-600 px-2 py-1 rounded text-sm font-medium shadow-glow-subtle">
+                  75% Rabatt
+                </div>
               </div>
               <div className="text-sm text-muted-foreground line-through mb-2">Regulär: €279/Monat</div>
               <CardDescription>Für professionelle AI-Entwickler</CardDescription>
             </CardHeader>
-            <div className="space-y-3 mb-6">
+            <div className="space-y-3 mb-6 relative z-10">
               <div className="flex items-center gap-3">
                 <Check className="h-5 w-5 text-green-500" />
                 <span>Unterstützt unbegrenzt viele Kunden</span>
@@ -318,13 +337,13 @@ function MarketingLanding() {
               </div>
             </div>
             <Link href="/subscribe">
-              <Button className="w-full bg-gradient-accent hover:bg-gradient-accent/90 text-white shadow-glow">
+              <Button className="w-full bg-gradient-accent hover:bg-gradient-accent/90 text-white shadow-glow-intense hover-glow pulse-glow relative z-10">
                 Jetzt starten
               </Button>
             </Link>
           </Card>
 
-          <Card className="card-container">
+          <Card className="card-container hover-glow">
             <CardHeader className="text-center p-0 pb-6">
               <CardTitle className="text-2xl mb-2">Custom Plan</CardTitle>
               <div className="text-4xl font-bold mb-2">
@@ -355,7 +374,7 @@ function MarketingLanding() {
               </div>
             </div>
             <Link href="/angebot">
-              <Button className="w-full bg-transparent" variant="outline">
+              <Button className="w-full bg-transparent hover-glow" variant="outline">
                 Kontakt aufnehmen
               </Button>
             </Link>
@@ -363,20 +382,27 @@ function MarketingLanding() {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto text-center section-spacing py-24">
-        <div className="bg-gradient-accent rounded-2xl p-12 text-white">
-          <h2 className="text-3xl font-bold mb-4">Bereit für intelligente Automatisierung?</h2>
-          <p className="text-xl mb-8 opacity-90">
-            Starte noch heute und erstelle deinen ersten KI-Agenten in unter 5 Minuten.
-          </p>
-          <Link href="/subscribe">
-            <Button
-              size="lg"
-              className="bg-white text-gray-900 hover:bg-gray-100 px-8 py-3 text-lg font-semibold shadow-glow"
-            >
-              Jetzt starten
-            </Button>
-          </Link>
+      <div className="max-w-4xl mx-auto text-center section-spacing py-12 sm:py-16 lg:py-24 page-container">
+        <div className="animated-gradient rounded-2xl p-6 sm:p-8 lg:p-12 text-white relative overflow-hidden shadow-glow-intense">
+          <div className="absolute inset-0">
+            <div className="absolute top-1/4 left-1/4 w-2 h-2 bg-white opacity-20 rounded-full animate-ping"></div>
+            <div className="absolute top-3/4 right-1/4 w-1 h-1 bg-white opacity-30 rounded-full animate-ping delay-1000"></div>
+            <div className="absolute bottom-1/4 left-3/4 w-1.5 h-1.5 bg-white opacity-25 rounded-full animate-ping delay-500"></div>
+          </div>
+          <div className="relative z-10">
+            <h2 className="text-2xl sm:text-3xl font-bold mb-3 sm:mb-4">Bereit für intelligente Automatisierung?</h2>
+            <p className="text-lg sm:text-xl mb-6 sm:mb-8 opacity-90">
+              Starte noch heute und erstelle deinen ersten KI-Agenten in unter 5 Minuten.
+            </p>
+            <Link href="/subscribe">
+              <Button
+                size="lg"
+                className="bg-white text-gray-900 hover:bg-gray-100 px-6 sm:px-8 py-3 text-base sm:text-lg font-semibold shadow-glow hover-glow w-full sm:w-auto"
+              >
+                Jetzt starten
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
 

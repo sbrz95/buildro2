@@ -12,6 +12,7 @@ import { Bot, Eye, EyeOff, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/contexts/auth-context"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -21,6 +22,7 @@ export default function LoginPage() {
   const [error, setError] = useState("")
   const router = useRouter()
   const { toast } = useToast()
+  const { login } = useAuth()
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -28,20 +30,19 @@ export default function LoginPage() {
     setError("")
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      })
 
-      // Mock validation
-      if (email === "demo@buildro.ai" && password === "demo123") {
-        localStorage.setItem("buildro_logged_in", "true")
-        localStorage.setItem(
-          "buildro_user",
-          JSON.stringify({
-            email,
-            name: "Demo User",
-            plan: "pro",
-          }),
-        )
+      const data = await response.json()
+
+      if (data.success) {
+        // Use the auth context login function
+        await login(data.user, data.session)
 
         toast({
           title: "Erfolgreich angemeldet",
@@ -50,9 +51,10 @@ export default function LoginPage() {
 
         router.push("/")
       } else {
-        setError("Ungültige E-Mail oder Passwort")
+        setError(data.error || "Anmeldung fehlgeschlagen")
       }
     } catch (err) {
+      console.error("Login error:", err)
       setError("Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.")
     } finally {
       setIsLoading(false)
@@ -64,29 +66,49 @@ export default function LoginPage() {
     setError("")
 
     try {
-      // Simulate Google OAuth flow
-      await new Promise((resolve) => setTimeout(resolve, 1500))
+      if (typeof window !== "undefined" && window.google) {
+        window.google.accounts.id.initialize({
+          client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
+          callback: async (response: any) => {
+            try {
+              const result = await fetch("/api/auth/google", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ token: response.credential }),
+              })
 
-      // Mock successful Google login
-      const googleUser = {
-        email: "user@gmail.com",
-        name: "Google User",
-        plan: "starter",
-        provider: "google",
+              const data = await result.json()
+
+              if (data.success) {
+                localStorage.setItem("buildro_logged_in", "true")
+                localStorage.setItem("buildro_user", JSON.stringify(data.user))
+
+                toast({
+                  title: "Mit Google angemeldet",
+                  description: "Willkommen bei buildro.ai!",
+                })
+
+                router.push("/")
+              } else {
+                setError(data.error || "Google-Anmeldung fehlgeschlagen")
+              }
+            } catch (err) {
+              setError("Google-Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.")
+            } finally {
+              setIsLoading(false)
+            }
+          },
+        })
+
+        window.google.accounts.id.prompt()
+      } else {
+        // Fallback for when Google SDK is not loaded
+        setError("Google-Anmeldung ist derzeit nicht verfügbar.")
       }
-
-      localStorage.setItem("buildro_logged_in", "true")
-      localStorage.setItem("buildro_user", JSON.stringify(googleUser))
-
-      toast({
-        title: "Mit Google angemeldet",
-        description: "Willkommen bei buildro.ai!",
-      })
-
-      router.push("/")
     } catch (err) {
       setError("Google-Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.")
-    } finally {
       setIsLoading(false)
     }
   }
